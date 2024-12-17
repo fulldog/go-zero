@@ -19,10 +19,12 @@ require (
 	golang.org/x/text v0.14.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/alicebob/miniredis/v2 v2.32.1 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210521184019-c5ad59b459ec // indirect
@@ -35,6 +37,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
+	github.com/foursking/btype v0.0.0-20201113100634-b48d9a15e856 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
@@ -71,6 +74,7 @@ require (
 	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/redis/go-redis/v9 v9.4.0 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
@@ -104,7 +108,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.29.3 // indirect
 	k8s.io/apimachinery v0.29.3 // indirect

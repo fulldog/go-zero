@@ -2,10 +2,10 @@ package parser
 
 import (
 	"fmt"
+	"github.com/zeromicro/go-zero/core/lang"
 	"path/filepath"
 	"strings"
 
-	"github.com/zeromicro/go-zero/core/lang"
 	"github.com/zeromicro/go-zero/tools/goctl/pkg/parser/api/ast"
 	"github.com/zeromicro/go-zero/tools/goctl/pkg/parser/api/importstack"
 	"github.com/zeromicro/go-zero/tools/goctl/pkg/parser/api/placeholder"
@@ -158,8 +158,9 @@ func (api *API) checkTypeStmt() error {
 	return f.error()
 }
 
+var typeMap = map[string]placeholder.Type{}
+
 func (api *API) checkTypeDeclareContext() error {
-	var typeMap = map[string]placeholder.Type{}
 	for _, v := range api.TypeStmt {
 		switch tp := v.(type) {
 		case *ast.TypeLiteralStmt:
@@ -170,7 +171,6 @@ func (api *API) checkTypeDeclareContext() error {
 			}
 		}
 	}
-
 	return api.checkTypeContext(typeMap)
 }
 
@@ -253,21 +253,26 @@ func (api *API) parseImportedAPI(imports []ast.ImportStmt) ([]*API, error) {
 	if len(imports) == 0 {
 		return list, nil
 	}
-
+	var importValueSetArr []string
 	var importValueSet = map[string]token.Token{}
 	for _, imp := range imports {
 		switch val := imp.(type) {
 		case *ast.ImportLiteralStmt:
-			importValueSet[strings.ReplaceAll(val.Value.Token.Text, `"`, "")] = val.Value.Token
+			key := strings.ReplaceAll(val.Value.Token.Text, `"`, "")
+			importValueSetArr = append(importValueSetArr, key)
+			importValueSet[key] = val.Value.Token
 		case *ast.ImportGroupStmt:
 			for _, v := range val.Values {
-				importValueSet[strings.ReplaceAll(v.Token.Text, `"`, "")] = v.Token
+				var key = strings.ReplaceAll(v.Token.Text, `"`, "")
+				importValueSet[key] = v.Token
+				importValueSetArr = append(importValueSetArr, key)
 			}
 		}
 	}
 
 	dir := filepath.Dir(api.Filename)
-	for impPath, tok := range importValueSet {
+	for _, impPath := range importValueSetArr {
+		tok := importValueSet[impPath]
 		if !filepath.IsAbs(impPath) {
 			impPath = filepath.Join(dir, impPath)
 		}
@@ -331,9 +336,9 @@ func (api *API) SelfCheck() error {
 	if err := api.checkInfoStmt(); err != nil {
 		return err
 	}
-	if err := api.checkTypeStmt(); err != nil {
-		return err
-	}
+	//if err := api.checkTypeStmt(); err != nil {
+	//	return err
+	//}
 	if err := api.checkServiceStmt(); err != nil {
 		return err
 	}

@@ -31,6 +31,7 @@ func genVars(table Table, withCache, postgreSql bool) (string, error) {
 		"upperStartCamelObject": camel,
 		"cacheKeys":             strings.Join(keys, "\n"),
 		"autoIncrement":         table.PrimaryKey.AutoIncrement,
+		"autoIncrementKey":      table.AutoIncrKey,
 		"originalPrimaryKey":    wrapWithRawString(table.PrimaryKey.Name.Source(), postgreSql),
 		"withCache":             withCache,
 		"postgreSql":            postgreSql,

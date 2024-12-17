@@ -73,6 +73,7 @@ func init() {
 	goCmdFlags.StringVar(&gogen.VarStringRemote, "remote")
 	goCmdFlags.StringVar(&gogen.VarStringBranch, "branch")
 	goCmdFlags.StringVarWithDefaultValue(&gogen.VarStringStyle, "style", config.DefaultFormat)
+	goCmdFlags.StringVar(&gogen.VarStringDiyType, "diyType")
 
 	javaCmdFlags.StringVar(&javagen.VarStringDir, "dir")
 	javaCmdFlags.StringVar(&javagen.VarStringAPI, "api")

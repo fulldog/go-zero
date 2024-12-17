@@ -3,6 +3,7 @@ package command
 import (
 	"errors"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -301,7 +302,13 @@ func fromMysqlDataSource(arg dataSourceArg) error {
 		if !arg.tablePat.Match(item) {
 			continue
 		}
-
+		//过滤备份表
+		if match, _ := regexp.MatchString(".*[0-9]+$", item); match {
+			continue
+		}
+		if match, _ := regexp.MatchString(".*(bak)$", item); match {
+			continue
+		}
 		columnData, err := im.FindColumns(dsn.DBName, item)
 		if err != nil {
 			return err

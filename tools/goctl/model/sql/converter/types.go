@@ -160,11 +160,11 @@ var commonMysqlDataTypeMapString = map[string]string{
 	"float8":    "float64",
 	"_float8":   "pq.Float64Array",
 	"double":    "float64",
-	"decimal":   "float64",
+	"decimal":   "decimal.Decimal",
 	"dec":       "float64",
 	"fixed":     "float64",
 	"real":      "float64",
-	"bit":       "byte",
+	"bit":       "driver.Value",
 	// date & time
 	"date":      "time.Time",
 	"datetime":  "time.Time",
@@ -291,17 +291,19 @@ func mayConvertNullType(goDataType string, isDefaultNull, unsigned, strict bool)
 
 	switch goDataType {
 	case "int64":
-		return "sql.NullInt64"
+		return "NullInt64"
 	case "int32":
-		return "sql.NullInt32"
+		return "NullInt32"
 	case "float64":
-		return "sql.NullFloat64"
+		return "NullFloat64"
 	case "bool":
-		return "sql.NullBool"
+		return "NullBool"
 	case "string":
-		return "sql.NullString"
+		return "NullString"
 	case "time.Time":
-		return "sql.NullTime"
+		return "NullTime"
+	case "decimal.Decimal":
+		return "NullDecimal"
 	default:
 		if unsigned {
 			ret, ok := unsignedTypeMap[goDataType]

@@ -1,0 +1,1 @@
+go build -o /Users/weilone/Downloads/webapp/netjoy/go-zero-template/goctl-decimal2 goctl.go

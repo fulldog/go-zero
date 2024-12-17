@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -76,7 +75,7 @@ func NewInformationSchemaModel(conn sqlx.SqlConn) *InformationSchemaModel {
 
 // GetAllTables selects all tables from TABLE_SCHEMA
 func (m *InformationSchemaModel) GetAllTables(database string) ([]string, error) {
-	query := `select TABLE_NAME from TABLES where TABLE_SCHEMA = ?`
+	query := `select TABLE_NAME from TABLES where TABLE_SCHEMA = ? and table_type = 'BASE TABLE'`
 	var tables []string
 	err := m.conn.QueryRows(&tables, query, database)
 	if err != nil {
@@ -161,11 +160,12 @@ func (c *ColumnData) Convert() (*Table, error) {
 
 	primaryColumns := m[indexPri]
 	if len(primaryColumns) == 0 {
-		return nil, fmt.Errorf("db:%s, table:%s, missing primary key", c.Db, c.Table)
+		primaryColumns = append(primaryColumns, c.Columns[0])
+		//return nil, fmt.Errorf("db:%s, table:%s, missing primary key", c.Db, c.Table)
 	}
 
 	if len(primaryColumns) > 1 {
-		return nil, fmt.Errorf("db:%s, table:%s, joint primary key is not supported", c.Db, c.Table)
+		//return nil, fmt.Errorf("db:%s, table:%s, joint primary key is not supported", c.Db, c.Table)
 	}
 
 	table.PrimaryKey = primaryColumns[0]

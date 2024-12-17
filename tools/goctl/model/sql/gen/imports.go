@@ -2,11 +2,10 @@ package gen
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/zeromicro/go-zero/tools/goctl/model/sql/template"
 	"github.com/zeromicro/go-zero/tools/goctl/util"
 	"github.com/zeromicro/go-zero/tools/goctl/util/pathx"
+	"strings"
 )
 
 func genImports(table Table, withCache, timeImport bool) (string, error) {
@@ -45,12 +44,28 @@ func genImports(table Table, withCache, timeImport bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	var driverAny = ""
+	var uuid = ""
+	var decimal = ""
+	for _, field := range table.Table.Fields {
+		if driverAny == "" && field.DataType == "driver.Value" {
+			driverAny = "database/sql/driver"
+		}
+		if uuid == "" && (strings.Contains(strings.ToLower(field.Name.Source()), "uuid") || strings.ToLower(field.ColumnType) == "char(36)") {
+			//uuid = "github.com/google/uuid"
+		}
+		if decimal == "" && strings.Contains(field.DataType, "decimal") {
+			decimal = "decimal.Decimal"
+		}
+	}
 	buffer, err := util.With("import").Parse(text).Execute(map[string]any{
 		"time":       timeImport,
 		"containsPQ": table.ContainsPQ,
 		"data":       table,
 		"third":      strings.Join(thirdImports, "\n"),
+		"driverAny":  driverAny,
+		"uuid":       uuid,
+		"decimal":    decimal,
 	})
 	if err != nil {
 		return "", err

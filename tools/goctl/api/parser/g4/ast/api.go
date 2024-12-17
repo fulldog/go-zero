@@ -127,9 +127,9 @@ func (v *ApiVisitor) duplicateServerItemCheck(service *Service) {
 
 func (v *ApiVisitor) acceptType(root, final *Api) {
 	for _, tp := range root.Type {
-		if _, ok := final.typeM[tp.NameExpr().Text()]; ok {
-			v.panic(tp.NameExpr(), fmt.Sprintf("duplicate type '%s'", tp.NameExpr().Text()))
-		}
+		//if _, ok := final.typeM[tp.NameExpr().Text()]; ok {
+		//	v.panic(tp.NameExpr(), fmt.Sprintf("duplicate type '%s'", tp.NameExpr().Text()))
+		//}
 
 		final.typeM[tp.NameExpr().Text()] = Holder
 		final.Type = append(final.Type, tp)

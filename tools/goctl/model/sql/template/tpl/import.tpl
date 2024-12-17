@@ -1,7 +1,10 @@
 import (
 	"context"
 	"database/sql"
+	{{if .driverAny}}"database/sql/driver"{{end}}
 	"fmt"
+	{{if .uuid}}"github.com/google/uuid"{{end}}
+	{{if .decimal}}"github.com/shopspring/decimal"{{end}}
 	"strings"
 	{{if .time}}"time"{{end}}
 

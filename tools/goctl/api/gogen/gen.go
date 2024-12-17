@@ -3,6 +3,7 @@ package gogen
 import (
 	"errors"
 	"fmt"
+	"github.com/zeromicro/go-zero/tools/goctl/pkg/golang"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,7 +19,7 @@ import (
 	"github.com/zeromicro/go-zero/tools/goctl/api/parser"
 	apiutil "github.com/zeromicro/go-zero/tools/goctl/api/util"
 	"github.com/zeromicro/go-zero/tools/goctl/config"
-	"github.com/zeromicro/go-zero/tools/goctl/pkg/golang"
+	parser2 "github.com/zeromicro/go-zero/tools/goctl/pkg/parser/api/parser"
 	"github.com/zeromicro/go-zero/tools/goctl/util"
 	"github.com/zeromicro/go-zero/tools/goctl/util/pathx"
 )
@@ -38,7 +39,8 @@ var (
 	// VarStringBranch describes the branch.
 	VarStringBranch string
 	// VarStringStyle describes the style of output files.
-	VarStringStyle string
+	VarStringStyle   string
+	VarStringDiyType string
 )
 
 // GoCommand gen go project files from command line
@@ -49,6 +51,12 @@ func GoCommand(_ *cobra.Command, _ []string) error {
 	home := VarStringHome
 	remote := VarStringRemote
 	branch := VarStringBranch
+	diytype := VarStringDiyType
+	if diytype != "" {
+		for _, s := range strings.Split(diytype, ",") {
+			parser2.AddBaseType(s)
+		}
+	}
 	if len(remote) > 0 {
 		repo, _ := util.CloneIntoGitHome(remote, branch)
 		if len(repo) > 0 {
@@ -100,6 +108,8 @@ func DoGenProject(apiFile, dir, style string) error {
 	logx.Must(genHandlers(dir, rootPkg, cfg, api))
 	logx.Must(genLogic(dir, rootPkg, cfg, api))
 	logx.Must(genMiddleware(dir, cfg, api))
+	logx.Must(genDiy(dir, cfg, api))
+	logx.Must(genDiyJson(dir, cfg, api))
 
 	if err := backupAndSweep(apiFile); err != nil {
 		return err

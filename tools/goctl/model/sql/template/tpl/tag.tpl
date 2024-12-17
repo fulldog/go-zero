@@ -1,1 +1,1 @@
-`db:"{{.field}}"`
+`db:"{{.field}}" json:"{{.field}},omitempty" columnType:"{{.columnType}}" isNullAble:"{{.isNullAble}}" defaultValue:"{{.defaultValue}}" isAutoIncrKey:"{{.isAutoIncrKey}}"`

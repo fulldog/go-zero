@@ -125,6 +125,7 @@ func GetOr(key, def string) string {
 }
 
 func UseExperimental() bool {
+	return true
 	return GetOr(GoctlExperimental, ExperimentalOff) == ExperimentalOn
 }
 

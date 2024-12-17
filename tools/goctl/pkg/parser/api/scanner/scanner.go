@@ -441,7 +441,7 @@ func (s *Scanner) illegalToken() token.Token {
 
 func (s *Scanner) scanIdent() token.Token {
 	position := s.position
-	for s.isIdentifierLetter(s.ch) || s.isDigit(s.ch) {
+	for s.isIdentifierLetter(s.ch) || s.isDigit(s.ch) || s.ch == '.' {
 		s.readRune()
 	}
 

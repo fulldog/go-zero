@@ -1,9 +1,11 @@
 package parser
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/zeromicro/ddl-parser/parser"
@@ -26,6 +28,7 @@ type (
 		UniqueIndex map[string][]*Field
 		Fields      []*Field
 		ContainsPQ  bool
+		AutoIncrKey string
 	}
 
 	// Primary describes a primary key
@@ -44,6 +47,10 @@ type (
 		SeqInIndex      int
 		OrdinalPosition int
 		ContainsPQ      bool
+		IsAutoIncr      bool
+		DefaultValue    string
+		ColumnType      string
+		IsNullAble      string
 	}
 
 	// KeyType types alias of int
@@ -267,7 +274,8 @@ func (t *Table) ContainsTime() bool {
 
 // ConvertDataType converts mysql data type into golang data type
 func ConvertDataType(table *model.Table, strict bool) (*Table, error) {
-	isPrimaryDefaultNull := table.PrimaryKey.ColumnDefault == nil && table.PrimaryKey.IsNullAble == "YES"
+	//isPrimaryDefaultNull := table.PrimaryKey.ColumnDefault == nil && table.PrimaryKey.IsNullAble == "YES"
+	isPrimaryDefaultNull := table.PrimaryKey.IsNullAble == "YES"
 	isPrimaryUnsigned := strings.Contains(table.PrimaryKey.DbColumn.ColumnType, "unsigned")
 	primaryDataType, thirdPkg, containsPQ, err := converter.ConvertStringDataType(table.PrimaryKey.DataType, isPrimaryDefaultNull, isPrimaryUnsigned, strict)
 	if err != nil {
@@ -305,6 +313,9 @@ func ConvertDataType(table *model.Table, strict bool) (*Table, error) {
 		if each.ContainsPQ {
 			reply.ContainsPQ = true
 		}
+		if each.IsAutoIncr {
+			reply.AutoIncrKey = each.Name.Source()
+		}
 		reply.Fields = append(reply.Fields, each)
 	}
 	sort.Slice(reply.Fields, func(i, j int) bool {
@@ -324,7 +335,7 @@ func ConvertDataType(table *model.Table, strict bool) (*Table, error) {
 		if len(each) == 1 {
 			one := each[0]
 			if one.Name == table.PrimaryKey.Name {
-				log.Warning("[ConvertDataType]: table %q, duplicate unique index with primary key:  %q", table.Table, one.Name)
+				log.Warning("[ConvertDataType]: table %s, duplicate unique index with primary key:  %s", table.Table, one.Name)
 				continue
 			}
 		}
@@ -338,7 +349,7 @@ func ConvertDataType(table *model.Table, strict bool) (*Table, error) {
 
 		uniqueKey := strings.Join(uniqueJoin, ",")
 		if uniqueIndexSet.Contains(uniqueKey) {
-			log.Warning("[ConvertDataType]: table %q, duplicate unique index %q", table.Table, uniqueKey)
+			log.Warning("[ConvertDataType]: table %s, duplicate unique index %s", table.Table, uniqueKey)
 			continue
 		}
 
@@ -352,7 +363,8 @@ func ConvertDataType(table *model.Table, strict bool) (*Table, error) {
 func getTableFields(table *model.Table, strict bool) (map[string]*Field, error) {
 	fieldM := make(map[string]*Field)
 	for _, each := range table.Columns {
-		isDefaultNull := each.ColumnDefault == nil && each.IsNullAble == "YES"
+		//isDefaultNull := (each.ColumnDefault == nil) && each.IsNullAble == "YES"
+		isDefaultNull := each.IsNullAble == "YES"
 		isPrimaryUnsigned := strings.Contains(each.ColumnType, "unsigned")
 		dt, thirdPkg, containsPQ, err := converter.ConvertStringDataType(each.DataType, isDefaultNull, isPrimaryUnsigned, strict)
 		if err != nil {
@@ -372,8 +384,63 @@ func getTableFields(table *model.Table, strict bool) (map[string]*Field, error) 
 			SeqInIndex:      columnSeqInIndex,
 			OrdinalPosition: each.OrdinalPosition,
 			ContainsPQ:      containsPQ,
+			IsAutoIncr:      strings.Contains(each.Extra, "auto_increment"),
+			DefaultValue:    ToString(each.ColumnDefault),
+			ColumnType:      each.ColumnType,
+			IsNullAble:      each.IsNullAble,
 		}
 		fieldM[each.Name] = field
 	}
 	return fieldM, nil
+}
+
+type appString interface {
+	String() string
+}
+
+func ToString(i interface{}) string {
+	if i == nil {
+		return ""
+	}
+	if f, ok := i.(appString); ok {
+		return f.String()
+	}
+	switch value := i.(type) {
+	case int:
+		return strconv.Itoa(value)
+	case int8:
+		return strconv.Itoa(int(value))
+	case int16:
+		return strconv.Itoa(int(value))
+	case int32:
+		return strconv.Itoa(int(value))
+	case int64:
+		return strconv.Itoa(int(value))
+	case uint:
+		return strconv.FormatUint(uint64(value), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(value), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(value), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(value), 10)
+	case uint64:
+		return strconv.FormatUint(uint64(value), 10)
+	case float32:
+		return strconv.FormatFloat(float64(value), 'f', -1, 32)
+	case float64:
+		return strconv.FormatFloat(value, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(value)
+	case string:
+		return value
+	case []byte:
+		return string(value)
+	default:
+		if f, ok := value.(appString); ok {
+			return f.String()
+		}
+		jsonContent, _ := json.Marshal(value)
+		return string(jsonContent)
+	}
 }

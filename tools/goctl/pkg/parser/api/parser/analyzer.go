@@ -477,3 +477,7 @@ func IsBaseType(text string) bool {
 	_, ok := kind[text]
 	return ok
 }
+
+func AddBaseType(in string) {
+	kind[in] = placeholder.PlaceHolder
+}

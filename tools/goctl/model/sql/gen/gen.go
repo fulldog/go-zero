@@ -3,6 +3,7 @@ package gen
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -121,6 +122,9 @@ func (g *defaultGenerator) StartFromDDL(filename string, withCache, strict bool,
 
 func (g *defaultGenerator) StartFromInformationSchema(tables map[string]*model.Table, withCache, strict bool) error {
 	m := make(map[string]*codeTuple)
+	if err := genDiy(g); err != nil {
+		log.Fatalln(err)
+	}
 	for _, each := range tables {
 		table, err := parser.ConvertDataType(each, strict)
 		if err != nil {
@@ -135,7 +139,9 @@ func (g *defaultGenerator) StartFromInformationSchema(tables map[string]*model.T
 		if err != nil {
 			return err
 		}
-
+		//if err := genDiyModel(g, *table); err != nil {
+		//	log.Fatalln(err)
+		//}
 		m[table.Name.Source()] = &codeTuple{
 			modelCode:       code,
 			modelCustomCode: customCode,

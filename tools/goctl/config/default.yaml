@@ -7,9 +7,6 @@ model:
     dec:
       null_type: sql.NullFloat64
       type: float64
-    decimal:
-      null_type: sql.NullFloat64
-      type: float64
     double:
       null_type: sql.NullFloat64
       type: float64
@@ -83,9 +80,9 @@ model:
       type: int64
       unsigned_type: uint64
     bit:
-      null_type: sql.NullByte
-      type: byte
-      unsigned_type: byte
+      null_type: driver.Value
+      type: driver.Value
+      unsigned_type: driver.Value
     bool:
       null_type: sql.NullBool
       type: bool
@@ -155,3 +152,6 @@ model:
     tinyblob:
       null_type: sql.NullString
       type: string
+    decimal:
+      null_type: decimal.NullDecimal
+      type: decimal.Decimal

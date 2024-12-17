@@ -133,3 +133,11 @@ var Delete string
 //
 //go:embed tpl/interface-delete.tpl
 var DeleteMethod string
+
+// Diy defines a diyMethod template for interface method
+//
+//go:embed tpl/diy.tpl
+var Diy string
+
+//go:embed tpl/diyModel.tpl
+var DiyModel string
