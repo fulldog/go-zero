@@ -55,6 +55,7 @@ type (
 		Type     string
 		UserName string
 		Pass     string
+		DbIndex  int
 		tls      bool
 		brk      breaker.Breaker
 	}
@@ -111,6 +112,8 @@ func NewRedis(conf RedisConf, opts ...Option) (*Redis, error) {
 
 	if conf.Type == ClusterType {
 		opts = append([]Option{Cluster()}, opts...)
+	} else {
+		opts = append([]Option{WithDb(conf.DbIndex)}, opts...)
 	}
 	if len(conf.Pass) > 0 {
 		opts = append([]Option{WithPass(conf.Pass)}, opts...)
@@ -1594,6 +1597,11 @@ func (s *Redis) Set(key, value string) error {
 	return s.SetCtx(context.Background(), key, value)
 }
 
+// GetRedisConn is the implementation of redis get command.
+func (s *Redis) GetRedisConn() (RedisNode, error) {
+	return getRedis(s)
+}
+
 // SetCtx is the implementation of redis set command.
 func (s *Redis) SetCtx(ctx context.Context, key, value string) error {
 	return s.brk.DoWithAcceptable(func() error {
@@ -2752,9 +2760,17 @@ func WithPass(pass string) Option {
 	}
 }
 
+// WithUserName customizes the given Redis with given username.
 func WithUserName(uname string) Option {
 	return func(r *Redis) {
 		r.UserName = uname
+	}
+}
+
+// WithDb customizes the given Redis with given db index.
+func WithDb(db int) Option {
+	return func(r *Redis) {
+		r.DbIndex = db
 	}
 }
 

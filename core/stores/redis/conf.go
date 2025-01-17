@@ -20,6 +20,7 @@ type (
 		Type     string `json:",default=node,options=node|cluster"`
 		UserName string `json:",optional"`
 		Pass     string `json:",optional"`
+		DbIndex  int    `json:",optional"`
 		Tls      bool   `json:",optional"`
 	}
 
@@ -36,6 +37,8 @@ func (rc RedisConf) NewRedis() *Redis {
 	var opts []Option
 	if rc.Type == ClusterType {
 		opts = append(opts, Cluster())
+	} else {
+		opts = append(opts, WithDb(rc.DbIndex))
 	}
 	if len(rc.Pass) > 0 {
 		opts = append(opts, WithPass(rc.Pass))

@@ -28,7 +28,7 @@ func getClient(r *Redis) (*red.Client, error) {
 			Addr:         r.Addr,
 			Username:     r.UserName,
 			Password:     r.Pass,
-			DB:           defaultDatabase,
+			DB:           r.DbIndex,
 			MaxRetries:   maxRetries,
 			MinIdleConns: idleConns,
 			TLSConfig:    tlsConfig,
