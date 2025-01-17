@@ -21,6 +21,7 @@ func getCluster(r *Redis) (*red.ClusterClient, error) {
 		store := red.NewClusterClient(&red.ClusterOptions{
 			Addrs:        []string{r.Addr},
 			Password:     r.Pass,
+			Username:     r.UserName,
 			MaxRetries:   maxRetries,
 			MinIdleConns: idleConns,
 			TLSConfig:    tlsConfig,
