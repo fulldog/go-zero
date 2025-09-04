@@ -1,4 +1,4 @@
-package crmx
+package {{.pkg}}
 
 import (
 	"bytes"
@@ -35,11 +35,12 @@ var (
 )
 
 type Repository struct {
-	conn sqlx.SqlConn
-	ctx  context.Context
-	list []func(ctx context.Context, conn sqlx.Session) error //前置事务
-	last []func(ctx context.Context, conn sqlx.Session) error //后置事务  该组操作会被放到事务最后执行
-	lock sync.Mutex
+	conn  sqlx.SqlConn
+	ctx   context.Context
+	list  []func(ctx context.Context, conn sqlx.Session) error //前置事务
+	last  []func(ctx context.Context, conn sqlx.Session) error //后置事务  该组操作会被放到事务最后执行
+	errFn []func(ctx context.Context)                          //失败操作
+	lock  sync.Mutex
 }
 
 func NewRepository(ctx context.Context, conn sqlx.SqlConn) *Repository {
@@ -50,6 +51,12 @@ func NewRepository(ctx context.Context, conn sqlx.SqlConn) *Repository {
 		conn: conn,
 		ctx:  ctx,
 	}
+}
+
+func (r *Repository) AddErr(fn ...func(ctx context.Context)) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.errFn = append(r.errFn, fn...)
 }
 
 func (r *Repository) AddLast(fn ...func(ctx context.Context, session sqlx.Session) error) {
@@ -64,29 +71,65 @@ func (r *Repository) Add(fn ...func(ctx context.Context, session sqlx.Session) e
 	r.list = append(r.list, fn...)
 }
 
+func (r *Repository) Reset() {
+	r.lock.Lock()
+	r.last = nil
+	r.errFn = nil
+	r.list = nil
+	r.lock.Unlock()
+}
+
 func (r *Repository) Run() error {
 	r.lock.Lock()
-	defer r.lock.Unlock()
-	r.list = append(r.list, r.last...)
+	defer func() {
+		r.last = nil
+		r.errFn = nil
+		r.list = nil
+		r.lock.Unlock()
+	}()
 	if len(r.list) == 0 {
 		return nil
 	}
-	err := r.conn.TransactCtx(r.ctx, func(ctx context.Context, session sqlx.Session) error {
-		for _, fn := range r.list {
-			err := fn(ctx, session)
-			if err != nil {
-				return err
+	var err error
+	for i := 0; i < 5; i++ {
+		err = r.conn.TransactCtx(r.ctx, func(ctx context.Context, session sqlx.Session) error {
+			for _, fn := range r.list {
+				err := fn(ctx, session)
+				if err != nil {
+					return err
+				}
 			}
+			for _, fn := range r.last {
+				err := fn(ctx, session)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err == nil {
+			break
 		}
-		return nil
-	})
+		time.Sleep(1 * time.Second)
+	}
+
+	if err != nil {
+		for _, f := range r.errFn {
+			f(r.ctx)
+		}
+	}
 	return err
 }
 
 // RunGo 协程方式 注意需要注意db是否支持并行事务
 func (r *Repository) RunGo() error {
 	r.lock.Lock()
-	defer r.lock.Unlock()
+	defer func() {
+		r.last = nil
+		r.errFn = nil
+		r.list = nil
+		r.lock.Unlock()
+	}()
 	if len(r.list) == 0 {
 		return nil
 	}
@@ -112,6 +155,7 @@ type baseModelFace[T any] interface {
 	Delete2(id int) error
 	Insert2(data *T) (sql.Result, error)
 	Update2(data *T) (sql.Result, error)
+	InsertBatch(data []*T) (sql.Result, error)
 	UpdateSlice(fields []string, data *T) (sql.Result, error)
 	UpdateWhere(data *T, where func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder) (sql.Result, error)
 	UpdateMapWhere(data map[string]interface{}, where func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder) (sql.Result, error)
@@ -286,7 +330,7 @@ func (b *baseModel[T]) FindOneByWhere(fields []string, fn func(builder squirrel.
 
 func (b *baseModel[T]) GetTableNameBySuffix() string {
 	if b.suffix != "" {
-		return fmt.Sprint(b.tableName, b.suffix)
+		return fmt.Sprint("`", strings.Trim(b.tableName, "`"), b.suffix, "`")
 	}
 	return b.tableName
 }
@@ -396,6 +440,19 @@ func (b *baseModel[T]) Count(fn func(builder squirrel.SelectBuilder) squirrel.Se
 func (b *baseModel[T]) Exist(fn func(builder squirrel.SelectBuilder) squirrel.SelectBuilder) bool {
 	total, _ := b.Count(fn)
 	return total > 0
+}
+
+func (b *baseModel[T]) InsertBatch(data []*T) (sql.Result, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	columns, values := b.buildDataInsert(data...)
+	var ibuilder = squirrel.Insert(b.GetTableNameBySuffix()).Columns(columns...)
+	for i := 0; i < len(values); i++ {
+		ibuilder = ibuilder.Values(values[i]...)
+	}
+	query, vals, _ := ibuilder.ToSql()
+	return b.conn.ExecCtx(b.ctx, query, vals...)
 }
 
 type columnExt struct {
@@ -767,13 +824,12 @@ func (d NullDecimal) MarshalJSON() ([]byte, error) {
 	}
 	return d.Decimal.MarshalJSON()
 }
-func (d *NullDecimal) UnmarshalJSON(data []byte) error {
-	err := d.Decimal.UnmarshalJSON(data)
-	if err != nil {
-		return err
+func (d *NullDecimal) UnmarshalJSON(data []byte) (err error) {
+	if !bytes.Equal(data, jsonNull) {
+		d.Valid = true
+		err = d.Decimal.UnmarshalJSON(data)
 	}
-	d.Valid = true
-	return nil
+	return err
 }
 
 func CreateNullBool(b bool) NullBool {
@@ -839,4 +895,45 @@ func (rec NullTime) ToString(layout string) string {
 		return rec.Time.Format(layout)
 	}
 	return ""
+}
+
+type DbSessionInf interface {
+	GetConn() sqlx.SqlConn
+	GetSession() sqlx.Session
+	Begin() error
+	Commit() error
+	Rollback() error
+}
+type dbSession struct {
+	conn sqlx.SqlConn
+	tx   sqlx.Session
+	rtx  *sql.Tx
+}
+
+func NewDbSession(conn sqlx.SqlConn) DbSessionInf {
+	return &dbSession{
+		conn: conn,
+	}
+}
+func (db *dbSession) GetConn() sqlx.SqlConn {
+	return db.conn
+}
+func (db *dbSession) GetSession() sqlx.Session {
+	return db.tx
+}
+func (db *dbSession) Begin() error {
+	rdb, err := db.conn.RawDB()
+	if err != nil {
+		return err
+	}
+	db.rtx, err = rdb.Begin()
+	db.tx = sqlx.NewSessionFromTx(db.rtx)
+	return err
+
+}
+func (db *dbSession) Commit() error {
+	return db.rtx.Commit()
+}
+func (db *dbSession) Rollback() error {
+	return db.rtx.Rollback()
 }
